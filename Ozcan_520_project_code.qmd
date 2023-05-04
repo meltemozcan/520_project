@@ -94,9 +94,6 @@ round(sqrt(diag(var(ses, na.rm = TRUE))), 2)
 #compRelSEM(cfa_uls)
 ```
 
-
-
-
 \footnote{All analyses were first conducted with the full dataset, and as expected with large N, the SE were quite small. We then took a random subset of 300 observations from this dataset to work with larger standard errors for illustrative purposes, and based on feedback received during the presentation, went back to the initial full sample of 1,053.}
 
 ```{r}
@@ -188,6 +185,7 @@ S <- as.data.frame(rstatix::pull_lower_triangle(mt, diag = 1))
 rownames(S) <- colnames(S) <- c("i1", "i2", "i3", "i4", "i5")
 S # input correlation matrix (= cov since variances are 1)
 ```
+
 ```{r}
 #| include: false
 xtable::xtable(S)
@@ -430,10 +428,7 @@ lav_dwls_se_r <- sqrt(diag(vcov(cfa_dwls_robust)[1:5,1:5]))
 lav_uls_se_r <- sqrt(diag(vcov(cfa_uls)[1:5,1:5]))
 ```
 
-
-
-
-
+### New robust standard errors (Lai and Simoes, 2023)
 
 ```{r}
 # Obtain the Hessian, matrix containing the second derivatives of 
@@ -482,6 +477,7 @@ round(SE_new_uls, 6)
 # Note: Lai and Simoes provide a function for this method as part of 
 # their suplemental materials at # https://bit.ly/3sOuLfR
 ```
+
 ```{r}
 #| results: asis
 #| message: false
@@ -518,7 +514,6 @@ xtable::xtable(tb, digits = 6)
 #            threeparttable = TRUE)
 ```
 
-
 ```{r}
 #| echo: false
 f2 <- function(x) format(round(x, 4))
@@ -539,8 +534,6 @@ msummary(c("WLS" = cfa_wls,
 #summary(cfa_uls, fit.measures = TRUE)
 ```
 
-
-
 ```{r}
 #| echo: false
 semPlot::semPaths(cfa_dwls_robust, intercepts = TRUE, residuals = TRUE, 
@@ -551,7 +544,6 @@ semPlot::semPaths(cfa_dwls_robust, intercepts = TRUE, residuals = TRUE,
                   edge.label.color = "black", edge.color ="grey70", layout = "tree", 
                   edge.label.position = .45, edge.width = .3)
 ```
-
 
 ```{r}
 #| include: false
@@ -614,14 +606,12 @@ barplot(table(ses$i4), xlab = "i4", main = "", col = "lightblue", ylim = c(0,350
 barplot(table(ses$i5), xlab = "i5", main = "", col = "lightblue", ylim = c(0,350))
 
 ```
+
 # References
 
-Lai, K., & Simoes, A. (2023). Reflecting on the “robust” standard errors for two-stage sem
-estimation with categorical data: Mistakes and correction. Structural Equation Modeling:
-A Multidisciplinary Journal, 1–17.
+Lai, K., & Simoes, A. (2023). Reflecting on the "robust" standard errors for two-stage sem estimation with categorical data: Mistakes and correction. Structural Equation Modeling: A Multidisciplinary Journal, 1--17.
 
-Olsson, U. (1979). Maximum likelihood estimation of the polychoric correlation coefficient.
-Psychometrika, 44(4), 443–460.
+Olsson, U. (1979). Maximum likelihood estimation of the polychoric correlation coefficient. Psychometrika, 44(4), 443--460.
 
 https://quantscience.rbind.io/2020/06/12/weighted-least-squares/#polychoric-correlations
 
