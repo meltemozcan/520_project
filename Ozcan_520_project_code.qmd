@@ -1,0 +1,642 @@
+---
+title: "CFA with Ordinal Data: Estimation Methods and 'Robust' Standard Errors"
+subtitle: "PSYC520 Final Project Code"
+format: pdf
+editor: visual
+documentclass: article
+toc: true
+---
+
+\clearpage
+
+# Analyses
+
+```{r}
+#| message: false
+#| warning: false
+set.seed(7)
+
+library(tidyverse)
+library(lavaan)
+library(semPlot, include.only = "semPaths")  
+library(modelsummary, include.only = "msummary")
+library(semTools, include.only = "compRelSEM")  
+library(semptools)
+library(flextable) 
+library(psych)
+library(dplyr)
+```
+
+```{r}
+#| include: false
+cn <- c("PartNum", "Sample", "Age", "Gender", "Ethnicity", "Diagnosis", "Medication", "Therapy", "Country", "
+Education", "PIL1", "PIL2", "PIL3", "PIL4", "ZAN1", "ZAN2", "ZAN3", "ZAN4", "ZAN5", "ZAN6", "ZAN7", "ZAN8", "ZAN9", "SES1", "SES2", "SES3", "SES4", "SES5", "
+SES6", "SES7", "SES8", "SES9", "SES10", "SES11", "SES12", "SES13", "SES14", "SES15", "SES16", "SES17", "SES18", "SES19", "SES20", "SES21", "SES21R", "
+SES22", "SES23", "SES24", "SES25", "SES26", "SES27", "SES28", "SES29", "SES30", "SES31", "SES32", "SES33", "SES34", "SES35", "SES36", "SES37", "
+SES38", "SES39", "SES40", "SES41", "SES42", "SES43", "SES44", "SES45", "SES46", "SES47", "SES48", "SES49", "SES50", "SES51", "SES52", "SES53", "
+BIS1", "BIS1R", "BIS2", "BIS3", "BIS4", "BIS4R", "BIS5", "BIS5R", "BIS6", "BIS6R", "BIS7", "BIS8", "CESD1", "CESD2", "CESD3", "CESD4", "CESD5", "
+CESD5R", "CESD6", "CESD7", "CESD8", "CESD8R", "CESD9", "CESD10", "VAL1", "VAL2", "VAL3", "VAL4", "VAL5", "VAL6", "VAL7", "VAL8", "VAL9", "VAL10", "
+VAL11", "VAL12", "VAL13", "PID1", "PID2", "PID3", "PID4", "PID5", "PID6", "PID6_R", "PID7", "PID8", "PID9", "PID10", "PID11", "PID12", "PID13", "PID14", "
+PID15", "PID16", "PID17", "PID18", "PID19", "PID20", "PID21", "PID22", "PID23", "PID24", "PID25", "PID26", "PID27", "PID28", "PID29", "PID30", "
+PID31", "PID32", "PID33", "PID34", "PID35", "PID36", "PID36_R", "PID37", "PID38", "PID39", "PID39_R", "PID40", "PID41", "PID42", "PID43", "PID44", "
+PID45", "PID46", "PID47", "PID48", "PID48_R", "PID49", "PID49_R", "PID50", "PID51", "PID52", "PID53", "PID54", "PID55", "PID56", "PID57", "PID58", "
+PID59", "PID60", "PID61", "PID62", "PID63", "PID64", "PID65", "PID65_R", "PID66", "PID67", "PID68", "PID69", "PID70", "PID71", "PID72", "PID73", "
+PID74", "PID75", "PID76", "PID77", "PID78", "PID79", "PID80", "PID80_R", "PID81", "PID82", "PID83", "PID84", "PID85", "PID86", "PID87", "PID88", "
+PID89", "PID90", "PID91", "PID92", "PID93", "PID93_R", "PID94", "PID95", "PID96", "PID97", "PID98", "PID99", "PID100", "SCIM1", "SCIM2", "SCIM3", "
+SCIM4", "SCIM5", "SCIM6", "SCIM7", "SCIM8", "SCIM9", "SCIM10", "SCIM11", "SCIM12", "SCIM12_R", "SCIM13", "SCIM13_R", "SCIM14", "SCIM14_R", "
+SCIM15", "SCIM15_R", "SCIM16", "SCIM16_R", "SCIM17", "SCIM17_R", "SCIM18", "SCIM18_R", "SCIM19", "SCIM19_R", "SCIM20", "SCIM20_R", "
+SCIM21", "SCIM21_R", "SCIM22", "SCIM23", "SCIM24", "SCIM25", "SCIM26", "SCIM27", "SES_5item_total", "PILTOTAL", "ZANTOTAL", "
+CESDTOTAL", "BISTOTAL", "Anhedonia", "Anxiousness", "AttentionSeeking", "Callousness", "Deceitfulness", "Depressivity", "
+Distractibility", "Eccentricity", "EmotionalLability", "Grandiosity", "Hostility", "Impulsivity", "IntimacyAvoidance", "
+Irresponsibility", "Manipulativeness", "PerceptualDysregulation", "Perseveration", "RestrictedAffectivity", "
+RigidPerfectionism", "RiskTaking", "SeparationInsecurity", "Submissiveness", "Suspiciousness", "UnsualBeliefsExp", "
+Withdrawal", "Antagonism", "Detachment", "Disinhibition", "NegativeAffectivity", "Psychoticism", "Consolidation", "
+DisturbedIdentity", "LackIdentity", "SCIMTOTAL")
+```
+
+We will conduct a CFA on the five-item Subjective Emptiness Scale (Price et al., 2022), items of which are rated on a 1-4 Likert Scale (1=not at all true to 4=very true). We will be using data from the second study (n = 1,067) in a series of three studies the authors conducted to develop and validate a self-report measure on subjective emptiness. The participants for the second study were recruited online via ads on social media platforms and study recruitment listing websites, and 94% reported having received a psychiatric diagnosis.
+
+```{r}
+#| message: false
+#| warning: false
+# read and format data
+tmp_path <- tempfile(fileext = "csv")  # temporary file
+download.file("https://osf.io/download/c3akx", 
+              destfile = tmp_path)
+emp <- read.csv(tmp_path, col.names = cn)
+emp2 <- emp %>% filter(Sample == 2)
+emp2 <- emp2[, c(1:28, 78:114)] # select columns
+names(emp2)[24:29] <- c("i1", "i2", "i3", "i4", "i5")
+#c("empty", "absent", "unfulfilled", "exist", "alone")
+ses <- emp2 %>% select(c("i1", "i2", "i3", "i4", "i5", "Age", "Gender"))
+ses[ses == 999] <- NA ## recode 999 as NA
+
+#max(ses, na.rm = TRUE)
+
+# As the goal is to illustrate differences in SE, and as
+# SE goes down as N goes up, we initially conducted analyses using
+# randomly sample of 300 out of all the observations, and reran the 
+# analyses with the full sample after receiving feedback during the 
+# presentation.
+#set.seed(7)
+#ses$id <- 1:length(ses$i1)
+#ids <- sample(ses$id, size = 300)
+#ses <- ses[ses$id %in% ids,]
+#ses <- ses[, -6]
+
+dim(ses)
+mean(ses$Age, na.rm = TRUE)
+sd(ses$Age, na.rm = TRUE)
+round(table(ses$Gender)/sum(table(ses$Gender)), 3)
+
+round(colMeans(ses, na.rm = TRUE),2)
+round(sqrt(diag(var(ses, na.rm = TRUE))), 2)
+#compRelSEM(cfa_uls)
+```
+
+
+
+
+\footnote{All analyses were first conducted with the full dataset, and as expected with large N, the SE were quite small. We then took a random subset of 300 observations from this dataset to work with larger standard errors for illustrative purposes, and based on feedback received during the presentation, went back to the initial full sample of 1,053.}
+
+```{r}
+ses <- na.omit(ses) # drop 14 observations listwise
+ses <- ses[,1:5]
+```
+
+### Thresholds
+
+Below, we build a contingency table for the first two items $X_1$ and $X_2$ (`empty`, `absent`) in the Subjective Emptiness Scale:
+
+```{r}
+emp_abs <- as.matrix(table(ses[1:2])/sum(table(ses[1:2])))
+# marginal proportions
+emp_abs <- rbind(emp_abs, as.numeric(colSums(emp_abs)))
+emp_abs <- cbind(emp_abs, as.numeric(rowSums(emp_abs)))
+rownames(emp_abs) <- c("1", "2", "3", "4", "P_absent(x)")
+colnames(emp_abs)  <- c("1", "2", "3", "4", "P_empty(x)")
+round(emp_abs, 3)
+```
+
+Using the cumulative marginal proportions from the contingency table above, we can estimate the thresholds for variable `empty` as:
+
+```{r}
+# c("empty", "absent", "unfulfilled", "exist", "alone")
+(empty_thr <- qnorm(cumsum(emp_abs[1:4, 5])))
+#and for the remaining items as:
+(absent_thr <- qnorm(cumsum(prop.table(table(ses$i2)))))
+(unf_thr <- qnorm(cumsum(prop.table(table(ses$i3)))))
+(exist_thr <- qnorm(cumsum(prop.table(table(ses$i4)))))
+(alone_thr <- qnorm(cumsum(prop.table(table(ses$i5)))))
+```
+
+As we will later see, these values match the thresholds reported by `lavaan::lavCor()`.
+
+### Polychoric correlation matrix
+
+We now build a polychoric correlation matrix for the Subjective Emptiness Scale items.
+
+```{r}
+# Function that takes in a correlation, a count table for two
+# items, an two vectors of thresholds and returns the sum of 
+# the product of the category frequencies and the logarithm 
+# of the cell probabilities.
+ll <- function(rho, ct, x1_th, x2_th) { 
+  # non redundant pairs of lower and upper thresholds
+  llim <- as.matrix(expand.grid(c(-Inf, x1_th), c(-Inf, x2_th)))
+  ulim <- as.matrix(expand.grid(c(x1_th, Inf), c(x2_th, Inf)))
+  
+  cellprobs <- 
+    vapply(seq_len(nrow(llim)), 
+           function(i, cor = rho) {
+             mvtnorm::pmvnorm(llim[i, ], ulim[i, ],
+                              corr = matrix(c(1, cor, cor, 1),
+                                            nrow = 2))
+             },
+           FUN.VALUE = numeric(1))
+  return(sum(ct * log(cellprobs)))
+}
+```
+
+```{r}
+# Maximize log likelihood f() for non-redundant item pairs
+ests <- c()
+thr <- list(empty_thr, absent_thr, unf_thr, exist_thr, 
+            alone_thr)
+ijs <- combn(1:5, 2)
+for (col in seq_len(ncol(ijs))) {
+  i <- ijs[1, col]
+  j <- ijs[2, col]
+  ests <- c(ests, 
+           optim(par = 0, # initial value
+                 fn = ll, # function to maximize
+                 ct = table(ses[, c(i, j)]), 
+                 # 1st item thresholds (excluding Inf)
+                 x1_th = thr[[i]][1:3], 
+                 # 2nd item thresholds (excluding Inf)
+                 x2_th = thr[[j]][1:3], 
+                 lower = -.99, upper = .99, 
+                 # allows box constraints 
+                 method = "L-BFGS-B", 
+                 # maximize the function
+                 control = list(fnscale = -1))$par)
+}
+
+mt <- diag(5)
+mt[lower.tri(mt, diag = FALSE)] <- round(ests, 3)
+S <- as.data.frame(rstatix::pull_lower_triangle(mt, diag = 1))
+rownames(S) <- colnames(S) <- c("i1", "i2", "i3", "i4", "i5")
+S # input correlation matrix (= cov since variances are 1)
+```
+```{r}
+#| include: false
+xtable::xtable(S)
+```
+
+We can confirm that the polychoric correlation matrix computed as above matches the polychoric correlation matrix computed by R:
+
+```{r}
+#| echo: false
+#| warning: false
+pcorr <- lavaan::lavCor(ses, ordered = TRUE, 
+                        se = "robust.sem", output = "fit")
+pc <- parameterestimates(pcorr)[6:15, c(4, 5, 8, 9)] #polychoric corr
+pc <- round(pc, 3)
+rownames(pc) <- c("s12", "s13", "s14", "s15", "s23",
+              "s24", "s25", "s34", "s35", "s45")
+
+th <- parameterestimates(pcorr)[16:30, c(4, 5, 8, 9)] #thresholds
+th <- round(th, 3)
+rownames(th) <- c("t11","t12", "t13", 
+                  "t21","t22", "t23",
+                  "t31","t32", "t33",
+                  "t41","t42", "t43",
+                  "t51","t52", "t53")
+
+kableExtra::kbl(pc, align = "c",
+                booktabs = T,
+                caption = "Polychoric correlation estimates") %>%
+  kableExtra::kable_styling(latex_options = c("hold_position"),
+                            full_width = F)
+
+kableExtra::kbl(th, align = "c",
+                booktabs = T,
+                caption = "Threshold estimates") %>%
+  kableExtra::kable_styling(latex_options = c("hold_position"),
+                            full_width = F)
+```
+
+### Estimation of model parameters
+
+Having obtained the threshold and polychoric correlation estimates, we can proceed to fit the model.
+
+```{r}
+s_lower <- coef(pcorr)[1:10] # polychoric corr matrix lower triangle
+
+# function to compute the implied correlation matrix lower triangle 
+# (thelatent variables were standardized)
+sigma_lower <- function(lambdas) { 
+  pc <- lambdas %*% t(lambdas)
+  return(pc[lower.tri(pc)])
+}
+# asymptotic covariance matrix of the matrix of sample polychoric correlations
+a_cov_mat <- vcov(pcorr)[1:10, 1:10] 
+w_mat <- diag(a_cov_mat)
+# asymptotic standard errors
+asymptotic_se <- sqrt(diag(a_cov_mat)) 
+```
+
+```{r}
+# Fit functions
+
+# Takes in loadings, the lower triangle of the sample 
+# polychoric correlations matrix (s), and the asymptotic 
+# covariance matrix (weight matrix)
+wls_fit <- 
+  function(lambdas, s = s_lower, w = a_cov_mat) {
+    sigma <- sigma_lower(lambdas)
+    (t(s - sigma) %*% matlib::inv(w)) %*% (s - sigma)
+}
+
+# Takes in loadings, the lower triangle of the sample 
+# polychoric correlations matrix (s), and the diagonals of 
+# the asymptotic covariance matrix (weight vector, diag(w))
+dwls_fit <- 
+  function(lambdas, s = s_lower, w = diag(a_cov_mat)) {
+    sigma <- sigma_lower(lambdas)
+    (t(s - sigma) * (1 /w )) %*% (s - sigma)
+}
+
+# Takes in loadings and the lower triangle of the 
+# sample polychoric correlations matrix (s)
+uls_fit <- function(lambdas, s = s_lower) {
+  sigma <- sigma_lower(lambdas)
+  t(s - sigma) %*% (s - sigma)
+}
+tictoc::tic()
+optim_dwls <- optim(rep(.5, 5), dwls_fit)
+tictoc::toc()
+tictoc::tic()
+optim_uls <- optim(rep(.5, 5), uls_fit)
+tictoc::toc()
+tictoc::tic()
+optim_wls <- optim(rep(.5, 5), wls_fit)
+tictoc::toc()
+```
+
+We see that the WLS estimator is a lot slower due to the matrix inversion.
+
+We fit the model in `lavaan` by inputting the model syntax, the raw data, and specifying the following: `std.lavaan = TRUE` (to identify the model by standardizing the latent variable), `ordered = TRUE` (as the data are ordinal), `estimator = "DWLS"`, `estimator = "WLS"` or `estimator = "ULS"`, `missing = "listwise"` (the default option; FIML is not available with DWLS, WLS, or ULS). For DWLS, robust standard errors are specified using `se = "robust.sem"` and robust (scaled) test statistic is requested with `test = "scaled.shifted"`.
+
+Note that specifying `estimator = "DWLS", se = "robust.sem", test = "scaled.shifted"` is equivalent to specifying `estimator = "WLSMV"` or `"WLSM"`.
+
+```{r}
+cfa_dwls_robust <- 
+  cfa('sbj_e =~  i1 + i2 + i3 + i4 + i5',
+      data = ses,
+      std.lv = TRUE,
+      ordered = names(ses),
+      estimator = "DWLS",
+      se = "robust.sem",
+      test = "scaled.shifted",
+      missing = "listwise"
+)
+
+# cfa_dwls_simple <- 
+#   cfa('sbj_e =~  i1 + i2 + i3 + i4 + i5',
+#       data = ses,
+#       std.lv = TRUE,
+#       ordered = names(ses),
+#       estimator = "DWLS",
+#       missing = "listwise"
+# )
+
+cfa_wls <- 
+  cfa('sbj_e =~  i1 + i2 + i3 + i4 + i5',
+      data = ses,
+      std.lv = TRUE,
+      ordered = names(ses),
+      estimator = "WLS",
+      se = "robust.sem"#,
+     # missing = "listwise"
+)
+
+cfa_uls <- 
+  cfa('sbj_e =~  i1 + i2 + i3 + i4 + i5',
+      data = ses,
+      std.lv = TRUE,
+      ordered = names(ses),
+      estimator = "ULSM",
+      missing = "listwise"
+)
+```
+
+Compare loading estimates produced by `lavaan` with the ones we computed:
+
+```{r}
+#| results: asis
+#| message: false
+#| warning: false
+#| echo: false
+library(kableExtra)
+tb <- as.data.frame(cbind(
+  "*" = round(optim_wls$par, 4), 
+  "lavaan" = round(coef(cfa_wls)[1:5], 4),
+  "*" = round(optim_dwls$par, 4),
+  "lavaan" = round(coef(cfa_dwls_robust)[1:5], 4),
+  "*" = round(optim_uls$par,4),
+  "lavaan" = round(coef(cfa_uls)[1:5], 4)
+  ))
+rownames(tb) <- c(expression("lambda 1"), "lambda 2", 
+                  "lambda 3", "lambda 4", "lambda 5")
+kableExtra::kbl(tb, align = "c",
+                booktabs = T,
+                caption = "Estimated loadings") %>%
+  kable_styling(latex_options = c("hold_position")) %>%
+  kable_styling(full_width = F) %>%
+add_header_above(c(" " = 1, "WLS" = 2, "DWLS" = 2, "ULS" = 2)) %>%
+  footnote(general = c("* denotes estimates obtained via direct computation. Columns labeled 'lavaan'indicate that estimates were obtained from the cfa() function output."),
+    general_title = "Note.",
+    footnote_as_chunk = FALSE, 
+    title_format = c("italic"), 
+    threeparttable = TRUE)
+```
+
+### Estimation of standard errors
+
+```{r}
+# First derivatives of the model implied polychoric 
+# correlations with respect to the estimated loadings
+Delta_dwls <- 
+  numDeriv::jacobian(sigma_lower, optim_dwls$par)
+Delta_wls <- 
+  numDeriv::jacobian(sigma_lower, optim_wls$par)
+Delta_uls <- 
+  numDeriv::jacobian(sigma_lower, optim_uls$par)
+
+w_dwls <- diag(diag(a_cov_mat))
+w_wls <- a_cov_mat
+```
+
+```{r}
+# Functions to compute the asymptotic covariance 
+# matrices with DWLS, WLS, ULS estimators
+asymptotic_cov_dwls_robust <- 
+  function(Delta = Delta_dwls, W = a_cov_mat, 
+           V = w_dwls) {
+  solve(t(Delta) %*% solve(V) %*% Delta) %*% t(Delta) %*%
+    solve(V) %*% W %*% solve(V) %*% Delta %*%
+    solve(t(Delta) %*% solve(V) %*% Delta)
+  }
+
+asymptotic_cov_dwls_simple <- 
+  function(Delta = Delta_dwls, V = w_dwls) {
+  solve(t(Delta) %*% solve(V) %*% Delta)
+  }
+
+asymptotic_cov_wls <- 
+  function(Delta = Delta_wls, W = a_cov_mat) {
+  # V cancels out in equation
+  solve(t(Delta) %*% solve(W) %*% Delta)
+}
+
+asymptotic_cov_uls <- 
+  function(Delta = Delta_uls, W = a_cov_mat) {
+  solve(t(Delta) %*% Delta) %*% t(Delta) %*% W %*%
+    Delta %*% solve(t(Delta) %*% Delta)
+  }
+```
+
+```{r}
+acov_wls <-
+  asymptotic_cov_wls(Delta_wls, W = a_cov_mat)
+acov_dwls_robust <- 
+  asymptotic_cov_dwls_robust(Delta_dwls, W = a_cov_mat, 
+                             V = w_dwls)
+acov_uls_robust <- 
+  asymptotic_cov_uls(Delta_uls, W = a_cov_mat)
+# acov_dwls_simple <- 
+#   asymptotic_cov_dwls_simple(Delta_dwls, V = w_dwls)
+
+a_se_wls <- sqrt(diag(acov_wls))
+a_se_dwls_robust <- sqrt(diag(acov_dwls_robust))
+a_se_uls_robust <- sqrt(diag(acov_uls_robust))
+# a_se_dwls_simple <- sqrt(diag(acov_dwls_simple))
+
+#estimates from lavaan
+lav_wls_se <- sqrt(diag(vcov(cfa_wls)[1:5,1:5]))
+lav_dwls_se_r <- sqrt(diag(vcov(cfa_dwls_robust)[1:5,1:5]))
+# lav_dwls_se_s <- sqrt(diag(vcov(cfa_dwls_simple)[1:5,1:5]))
+lav_uls_se_r <- sqrt(diag(vcov(cfa_uls)[1:5,1:5]))
+```
+
+
+
+
+
+
+```{r}
+# Obtain the Hessian, matrix containing the second derivatives of 
+# the discrepancy function with respect to the (free) model parameters
+H_uls <- inspect(cfa_uls, "hessian") 
+H_dwls <- inspect(cfa_dwls_robust, "hessian") 
+  
+# Take the inverse of the Hessian
+H_uls.inv <- try(chol2inv(chol(H_uls)), TRUE)
+H_dwls.inv <- try(chol2inv(chol(H_dwls)), TRUE)
+  
+# Obtain the (inverse) of the asymptotic variance matrix of the sample 
+# statistics (given by wls.v)
+# https://groups.google.com/g/lavaan/c/Rkwq10jV8JU.
+W_uls <- inspect(cfa_uls, "wls.v")  # we know this is a 25x25 identity matrix
+W_dwls <- inspect(cfa_dwls_robust, "wls.v") 
+  
+# Obtain the asymptotic 4th moment, N times the asymptotic variance matrix
+# of the sample statistics. Alias: "sampstat.nacov".
+Gamma <- inspect(cfa_dwls_robust, "gamma") #same for uls and dwls
+
+# Scaling factors
+Delta_uls_new <- inspect(cfa_uls, "delta") 
+Delta_dwls_new <- inspect(cfa_dwls_robust, "delta")
+	
+# derivative of the discrepancy functions w.r.t. s and theta
+K_uls <- t(Delta_uls_new) # lai and simoes eq (29) 
+K_dwls <- t(Delta_dwls_new) %*% diag(1/diag(Gamma)) # lai and simoes eq (37) 
+	
+# N times asymptotic covariance matrix of the parameter estimates
+Pi_uls <- - H_uls.inv %*% K_uls %*% Gamma %*% t(-H_uls.inv %*% K_uls)
+Pi_dwls <- - H_dwls.inv %*% K_dwls %*% Gamma %*% t(-H_dwls.inv %*% K_dwls)
+
+n <- inspect(cfa_uls, "nobs") #number of observations
+ 
+# compute the standard errors of the parameter estimates
+SE_new_uls <-  sqrt(diag(Pi_uls)/n)[1:5]
+SE_new_dwls <-  sqrt(diag(Pi_dwls)/n)[1:5]
+
+# for compaison with lavaan output
+round(lav_dwls_se_r, 6)
+round(SE_new_dwls, 6)
+round(lav_uls_se_r, 6)
+round(SE_new_uls, 6)
+
+# Note: Lai and Simoes provide a function for this method as part of 
+# their suplemental materials at # https://bit.ly/3sOuLfR
+```
+```{r}
+#| results: asis
+#| message: false
+#| warning: false
+#| echo: false
+#library(kableExtra)
+tb <- as.data.frame(cbind(
+  " " = round(a_se_wls, 6), 
+  " " = round(lav_wls_se, 6),
+ "new" = round(SE_new_dwls[1:5],6),
+  "robust" = round(a_se_dwls_robust, 6),
+  "robust" = round(lav_dwls_se_r, 6),
+ # "simple" = round(a_se_dwls_simple, 5),
+#  "simple" = round(lav_dwls_se_s, 5),
+  "new" = round(SE_new_uls[1:5],6),
+  " " = round(a_se_uls_robust, 6),
+  " " = round(lav_uls_se_r, 6)))
+rownames(tb) <- c("SE(lambda 1)", "SE(lambda 2)", "SE(lambda 3)", 
+                  "SE(lambda 4)", "SE(lambda 5)")
+
+xtable::xtable(tb, digits = 6)
+# kableExtra::kbl(tb, align = "c",
+#                 booktabs = T,
+#                 caption = "Standard error estimates") %>%
+#   kable_styling(latex_options = c("hold_position")) %>%
+#   add_header_above(c(" " = 1 , "*" = 1, "lavaan" = 1, 
+#                     "lavaan" = 1, "*" = 1, "lavaan" = 1, "*" = 1, 
+#                      "lavaan" = 1, "*" = 1, "lavaan" = 1)) %>%
+#   add_header_above(c(" " = 1, "WLS" = 2, "DWLS" = 5, "ULS" = 2)) %>%
+#   footnote(general = c("* denotes estimates obtained via direct computation. Columns labeled 'lavaan'indicate that estimates were obtained from the cfa() function output. 'new' column contains SEs computed using the new method by Lai and Simoes, 2023."),
+#            general_title = "Note.",
+#            footnote_as_chunk = TRUE, 
+#            title_format = c("italic"),
+#            threeparttable = TRUE)
+```
+
+
+```{r}
+#| echo: false
+f2 <- function(x) format(round(x, 4))
+msummary(c("WLS" = cfa_wls, 
+           "DWLS"= cfa_dwls_robust, 
+           "ULS" = cfa_uls),
+           gof_omit = "IC", 
+           shape = term ~ model + statistic, 
+           estimate = "{estimate} [{conf.low}, {conf.high}]",
+           title = "Factor loading estimate and SEs with WLS, DWLS, ULS 
+         estimation", 
+         fmt = f2,
+           coef_rename = c("empty", "absent", "unfulfilled", "exist", "alone"))
+#summary(cfa_dwls)
+
+#lavInspect(cfa_dwls, what = "sampstat")$cov
+
+#summary(cfa_uls, fit.measures = TRUE)
+```
+
+
+
+```{r}
+#| echo: false
+semPlot::semPaths(cfa_dwls_robust, intercepts = TRUE, residuals = TRUE, 
+                  what = "est",  asize = 1.5, sizeMan = 5,
+                  sizeInt = 3.5, sizeLat = 6, label.cex = 1.2, 
+                  style = "ram", edge.label.cex = 1, include = 1, 
+                   label.color = "black", 
+                  edge.label.color = "black", edge.color ="grey70", layout = "tree", 
+                  edge.label.position = .45, edge.width = .3)
+```
+
+
+```{r}
+#| include: false
+
+dnorm_limit0 <- function(x) {
+    y <- dnorm(x)
+    y[x > exist_thr[1]] <- NA
+    y
+}
+
+dnorm_limit1 <- function(x) {
+    y <- dnorm(x)
+    y[x < exist_thr[1]  |  x > exist_thr[2]] <- NA
+    y
+}
+dnorm_limit2 <- function(x) {
+    y <- dnorm(x)
+    y[x < exist_thr[2]  |  x > exist_thr[3]] <- NA
+    y
+}
+dnorm_limit3 <- function(x) {
+    y <- dnorm(x)
+    y[x < exist_thr[3]  |  x > exist_thr[4]] <- NA
+    y
+}
+
+p <- ggplot(data.frame(x = c(-3, 3)), aes(x = x))
+
+p + stat_function(fun = dnorm_limit1,
+                geom = "area",  alpha = 0.2, fill = "skyblue1") +
+   stat_function(fun = dnorm_limit2,
+                geom = "area",  alpha = 0.2, fill = "red2") +
+   stat_function(fun = dnorm_limit3,
+                geom = "area", alpha = 0.2,fill = "lightgreen") +
+
+   stat_function(fun = dnorm_limit0,
+                geom = "area", alpha = 0.2, fill = "orange") +
+  stat_function(fun = dnorm) +
+  theme(panel.background = element_rect(fill='transparent'),
+        axis.ticks.y=element_blank(), 
+        axis.text.y=element_blank()) +
+  xlab("score on X*") + ylab("density")
+par(las=2)
+barplot(table(ses$i4)/sum(table(ses$i4)), 
+        col = c("burlywood1", "lightblue","salmon","darkseagreen2"),
+        xlab = "score on X", ylab = "proportion", ylim = c(0,0.4))
+
+barplot(c("1" = 15, "2" = 25, "3"=10, "4"=45), 
+        col = c("burlywood1", "lightblue","salmon","darkseagreen2"), xlab = "score", ylab = "",  yaxt="n")
+```
+
+```{r}
+
+par( las = 2)
+
+barplot(table(ses$i1), xlab = "i1", main = "", col = "lightblue", ylim = c(0,350))
+barplot(table(ses$i2), xlab = "i2", main = "", col = "lightblue", ylim = c(0,350))
+barplot(table(ses$i3), xlab = "i3", main = "", col = "lightblue", ylim = c(0,350))
+barplot(table(ses$i4), xlab = "i4", main = "", col = "lightblue", ylim = c(0,350))
+barplot(table(ses$i5), xlab = "i5", main = "", col = "lightblue", ylim = c(0,350))
+
+```
+# References
+
+Lai, K., & Simoes, A. (2023). Reflecting on the “robust” standard errors for two-stage sem
+estimation with categorical data: Mistakes and correction. Structural Equation Modeling:
+A Multidisciplinary Journal, 1–17.
+
+Olsson, U. (1979). Maximum likelihood estimation of the polychoric correlation coefficient.
+Psychometrika, 44(4), 443–460.
+
+https://quantscience.rbind.io/2020/06/12/weighted-least-squares/#polychoric-correlations
+
+Flora, D.B, & Curran, P.J. An empirical evaluation of alternative methods of estimation for confirmatory factor analysis with ordinal data. *Psychological methods* vol. 9,4 (2004): 466-91. doi:10.1037/1082-989X.9.4.466.
+
+Liddell, T., & Kruschke, J. K. (2017). Analyzing ordinal data with metric models: What could possibly go wrong?. https://doi.org/10.31219/osf.io/9h3et.\
+
+Li C. H. (2016). Confirmatory factor analysis with ordinal data: Comparing robust maximum likelihood and diagonally weighted least squares. *Behavior research methods*, *48*(3), 936--949. https://doi.org/10.3758/s13428-015-0619-7.
+
+R Core Team (2022). R: A language and environment for statistical computing. R Foundation for Statistical Computing, Vienna, Austria. URL https://www.R-project.org/.
+
+Savalei, V., & Rosseel, Y. (2022). Computational options for standard errors and test statistics with incomplete normal and nonnormal data in sem. Structural Equation Modeling: A Multidisciplinary Journal, 29(2).
+
+Stevens, S. S. (1946). On the Theory of Scales of Measurement. Science, 103, 677-80. doi:10.1126/science.103.2684.677.
+
+Yang-Wallentin, F., Jöreskog, K.G. & Luo, H. (2010). Confirmatory Factor Analysis of Ordinal Variables With Misspecified Models', Structural Equation Modeling: A Multidisciplinary Journal, 17(3), 392-423. 10.1080/10705511.2010.489003.
+
+Wu, H., Estabrook, R. (2016). Identification of Confirmatory Factor Analysis Models of Different Levels of Invariance for Ordered Categorical Outcomes. *Psychometrika* **81**, 1014--1045. https://doi.org/10.1007/s11336-016-9506-0.
